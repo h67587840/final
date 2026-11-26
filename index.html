@@ -3,19 +3,31 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>晨曦王國的守護者：自然科學戰棋</title>
 <style>
-body{margin:0;background:#14181f;color:#eee;font-family:system-ui,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;display:flex;justify-content:center}
-#w{position:relative;width:768px;max-width:100%}
-canvas{width:100%;display:block;background:#000;touch-action:manipulation}
-#hud{padding:8px;font-size:15px;line-height:1.5;white-space:pre-line;min-height:48px}
+*{box-sizing:border-box}
+html{min-height:100%;background:#14181f}
+body{margin:0;min-height:100vh;min-height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:#14181f;color:#eee;font-family:system-ui,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;display:flex;justify-content:center;align-items:flex-start}
+#w{position:relative;width:min(100%,768px);flex:0 1 768px}
+canvas{width:100%;height:auto;aspect-ratio:3/2;display:block;background:#000;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
+#hud{padding:8px;font-size:clamp(13px,3.5vw,15px);line-height:1.5;white-space:pre-line;min-height:48px;overflow-wrap:anywhere}
 #bar{padding:0 8px 12px;display:flex;gap:8px;flex-wrap:wrap}
-button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid #556;background:#2a3140;color:#eee;cursor:pointer}
+button{font:inherit;min-height:44px;padding:8px 14px;border-radius:8px;border:1px solid #556;background:#2a3140;color:#eee;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 button:hover:not(:disabled){background:#3a4358}button:disabled{opacity:.5}
 #dlg{position:absolute;left:0;right:0;top:calc(100vw * 0);display:none;background:rgba(10,12,20,.92);border-top:2px solid #c9a53c;padding:10px 14px;box-sizing:border-box;cursor:pointer}
 #dn{color:#ffd966;font-weight:bold;font-size:18px}#dt{font-size:20px;margin-top:4px}
-#qz{position:absolute;left:3%;right:3%;top:3%;display:none;background:rgba(14,18,30,.97);border:2px solid #c9a53c;border-radius:10px;padding:14px;box-sizing:border-box}
+#qz{position:absolute;left:3%;right:3%;top:3%;display:none;max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px);overflow-y:auto;overscroll-behavior:contain;background:rgba(14,18,30,.97);border:2px solid #c9a53c;border-radius:10px;padding:14px}
 #qh{color:#ffd966;font-size:14px}#qq{font-size:20px;margin:8px 0}
-.o{display:block;width:100%;text-align:left;margin:6px 0;font-size:17px}
+.o{display:block;width:100%;min-height:48px;text-align:left;margin:6px 0;font-size:17px;white-space:normal;overflow-wrap:anywhere}
 #qf{white-space:pre-line;margin:8px 0;font-size:16px}
+@media(max-width:520px){
+ #bar button{flex:1 1 128px;padding-inline:10px}
+ #dlg{padding:8px 10px}
+ #dn{font-size:16px}
+ #dt{font-size:18px}
+ #qz{padding:10px}
+ #qq{font-size:18px}
+ .o{font-size:16px}
+ #qf{font-size:15px}
+}
 </style></head><body>
 <div id="w"><canvas id="cv" width="768" height="512"></canvas>
 <div id="dlg"><div id="dn"></div><div id="dt"></div></div>
