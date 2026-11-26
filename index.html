@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>晨曦王國的守護者：自然科學戰棋</title>
+<style>
+body{margin:0;background:#14181f;color:#eee;font-family:system-ui,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;display:flex;justify-content:center}
+#w{position:relative;width:768px;max-width:100%}
+canvas{width:100%;display:block;background:#000;touch-action:manipulation}
+#hud{padding:8px;font-size:15px;line-height:1.5;white-space:pre-line;min-height:48px}
+#bar{padding:0 8px 12px;display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid #556;background:#2a3140;color:#eee;cursor:pointer}
+button:hover:not(:disabled){background:#3a4358}button:disabled{opacity:.5}
+#dlg{position:absolute;left:0;right:0;top:calc(100vw * 0);display:none;background:rgba(10,12,20,.92);border-top:2px solid #c9a53c;padding:10px 14px;box-sizing:border-box;cursor:pointer}
+#dn{color:#ffd966;font-weight:bold;font-size:18px}#dt{font-size:20px;margin-top:4px}
+#qz{position:absolute;left:3%;right:3%;top:3%;display:none;background:rgba(14,18,30,.97);border:2px solid #c9a53c;border-radius:10px;padding:14px;box-sizing:border-box}
+#qh{color:#ffd966;font-size:14px}#qq{font-size:20px;margin:8px 0}
+.o{display:block;width:100%;text-align:left;margin:6px 0;font-size:17px}
+#qf{white-space:pre-line;margin:8px 0;font-size:16px}
+</style></head><body>
+<div id="w"><canvas id="cv" width="768" height="512"></canvas>
+<div id="dlg"><div id="dn"></div><div id="dt"></div></div>
+<div id="qz"><div id="qh"></div><div id="qq"></div><div id="ob"></div><div id="qf"></div><button id="qc" style="display:none">繼續</button></div>
+<div id="hud"></div>
+<div id="bar"><button id="bw">待機</button><button id="be">結束回合</button><button id="bc">取消</button><button id="bn" style="display:none"></button></div>
+</div>
+<script>
+const STAGES=[{"name": "翠綠森林", "map": ["..F....FF...", "....F...F..F", ".F..FF......", "......F..FF.", ".F...FF.F...", "....F.....F.", "..F...F..F..", "F....FF....."], "enemies": [["goblin", 9, 2], ["goblin", 9, 5], ["goblin", 10, 4]], "intro": [["旁白", "晨曦王國遭到暗影軍入侵，王都的守衛節節敗退。"], ["賽恩", "我是王國的劍士賽恩。邊境的翠綠森林已經被佔領了，我們要先把它奪回來！"], ["莉雅", "我是弓箭手莉雅。聽說暗影軍被打倒之後，還會再站起來……"], ["巴洛", "哈！那就把他們揍到爬不起來！"], ["莉雅", "沒用的啦。古書上說，只有答對自然科學的問題，才能徹底擊敗他們。"], ["賽恩", "那就用知識和力量一起戰鬥吧！出發！"]], "win": [["賽恩", "翠綠森林奪回來了！"], ["巴洛", "原來動腦筋比揮拳還重要……不過揮拳也很重要。"]]}, {"name": "磁石山道", "map": ["..FMM.MMMM..", "...M...M.MM.", "......MM....", "..F.........", "......MM....", "...M...M.MM.", "...MM.MMMM.F", "..FMM.MMM..."], "enemies": [["goblin", 9, 2], ["goblin", 9, 4], ["bandit_archer", 11, 3], ["orc", 10, 3]], "intro": [["旁白", "穿過森林，隊伍來到崎嶇的磁石山道，暗影軍守住了狹窄的通道。"], ["卡蓮", "等一下！我是巫師卡蓮，我也想為王國出一份力，讓我加入吧！"], ["賽恩", "歡迎你，卡蓮！"]], "win": [["卡蓮", "山道打通了，繼續前進吧。"]]}, {"name": "風之高原", "map": ["............", "...M....M...", "............", ".....M....M.", "............", "...M....M...", "............", ".F........F."], "enemies": [["goblin", 9, 1], ["orc", 10, 2], ["wolf", 9, 3], ["wolf", 9, 5], ["bandit_archer", 11, 4]], "intro": [["旁白", "隊伍登上遼闊的風之高原，遠處傳來了馬蹄聲。"], ["雷恩", "我是王國騎士雷恩，奉命前來支援！"], ["巴洛", "太好了，又多了一個可靠的夥伴！"]], "win": [["雷恩", "高原上的敵人都清除了，前方就是香料之城。"]]}, {"name": "香料之城", "map": ["...MMMMMMMM.", "...M......M.", "......MM..M.", "...M..MM....", "...M........", "......MM..M.", "...M......M.", "...MMMMMMMM."], "enemies": [["skeleton", 8, 2], ["skeleton", 8, 5], ["goblin", 9, 3], ["orc", 10, 4], ["dark_mage", 9, 4]], "intro": [["旁白", "香料之城被暗影軍包圍，城門緊閉。"], ["米拉", "我是大法師米拉。城裡的人需要幫助，請讓我與你們同行。"], ["賽恩", "有大法師加入，我們更有信心了！"]], "win": [["米拉", "香料之城重獲自由了。"]]}, {"name": "田園之村", "map": ["..F...WW....", "......WW.F..", "F.....WW....", "............", "......WW.F..", ".F....WW....", "......WW....", "..F......F.."], "enemies": [["skeleton", 8, 2], ["skeleton", 8, 5], ["wolf", 9, 3], ["orc", 10, 2], ["dark_mage", 10, 4], ["bandit_archer", 11, 3]], "intro": [["旁白", "隊伍來到田園之村，村子被暗影軍團團圍住。"], ["薇菈", "我是龍騎士薇菈。我在天上看到了這裡的情況，讓我來幫忙！"], ["莉雅", "從天上來的援軍，太棒了！"]], "win": [["薇菈", "村民們都平安了。前面的峽谷看起來很危險。"]]}, {"name": "熔爐峽谷", "map": ["MM......MMMM", "...F..MM....", "......MM..F.", "..F.........", "......MM....", "...F..MM..F.", "......MM....", "MM......MMMM"], "enemies": [["orc", 9, 2], ["orc", 9, 4], ["dark_mage", 10, 3], ["dark_mage", 9, 5], ["skeleton", 10, 1], ["wolf", 11, 3]], "intro": [["旁白", "熔爐峽谷裡，有一座古老的工坊還在運轉。"], ["零號", "偵測到友軍。我是零號，古代工坊的守衛機器人。請求加入戰鬥。"], ["賽恩", "歡迎加入，零號！"]], "win": [["零號", "峽谷已清除。下一個目標：王都。"]]}, {"name": "野獸之地", "map": ["..FFF..F.FF.", ".FF..WW..F..", "F...FWW.....", "......F..WW.", ".F.....F....", "...WW....FF.", "F..WW.F.....", "..FF....F..."], "enemies": [["golem", 10, 4], ["orc", 9, 2], ["orc", 9, 5], ["dark_mage", 11, 3], ["skeleton", 8, 1], ["skeleton", 8, 4], ["bandit_archer", 11, 5]], "intro": [["旁白", "再往前，是暗影軍盤踞的野獸之地。穿過這裡，就能抵達王都。"], ["賽恩", "大家，最後一段路了！"], ["卡蓮", "大家的知識，一定會成為我們的力量。"]], "win": [["賽恩", "王都就在眼前了！"]]}, {"name": "暗影王都", "map": ["...F..MMMMMM", "......M....M", "..F...M.WW.M", "............", "......M.WW.M", "......M....M", "...F..MMMMMM", "F....F......"], "enemies": [["boss", 10, 3], ["golem", 8, 3], ["dark_mage", 9, 1], ["dark_mage", 9, 5], ["orc", 7, 2], ["orc", 7, 4], ["skeleton", 10, 2], ["skeleton", 10, 4]], "intro": [["旁白", "暗影王都，王國的最後一道防線。"], ["暗影領主", "愚蠢的人類，你們再怎麼努力，也無法徹底擊敗我的軍隊。"], ["莉雅", "我們可以！只要答對問題，你們就會消失！"], ["賽恩", "為了晨曦王國，最後一戰！"]], "win": [["暗影領主", "不可能……我竟然輸給了知識……"], ["旁白", "暗影軍消失了，晨曦王國終於恢復了和平。"], ["賽恩", "謝謝大家，我們做到了！"], ["莉雅", "這趟旅程，我們學到了好多。"]]}];
+const QUIZ=[{"stage": 1, "unit": "三上｜多采多姿的植物", "q": "下列哪一項是生物？", "options": ["小草", "石頭", "空氣", "水"], "exp": "自然環境中有生物，也有非生物；動物和植物都是生物。"}, {"stage": 1, "unit": "三上｜多采多姿的植物", "q": "植物的外部形態主要由哪些部分組成？", "options": ["根、莖、葉、花、果實、種子", "根、莖、葉、翅膀、眼睛、嘴巴", "頭、身體、腳、尾巴", "殼、肉、腳、觸角"], "exp": "植物的身體分成根、莖、葉、花、果實和種子。"}, {"stage": 1, "unit": "三上｜多采多姿的植物", "q": "觀察植物的葉子時，下列哪一項是可以拿來比較的特徵？", "options": ["葉脈", "年齡", "體重", "叫聲"], "exp": "觀察葉子可以比較葉子的形狀、葉緣、葉脈和大小等特徵。"}, {"stage": 1, "unit": "三上｜多采多姿的植物", "q": "葉子的邊緣有的圓滑、有的有鋸齒，葉子的邊緣叫做什麼？", "options": ["葉緣", "葉脈", "根", "果實"], "exp": "葉子的邊緣叫做葉緣，有的圓滑，有的有鋸齒。"}, {"stage": 1, "unit": "三上｜多采多姿的植物", "q": "葉子裡像網子或長條線的紋路，叫做什麼？", "options": ["葉脈", "葉緣", "花萼", "鬚根"], "exp": "葉子裡像網子或長條線的紋路叫做葉脈。"}, {"stage": 1, "unit": "三上｜多采多姿的植物", "q": "花的基本構造有哪些？", "options": ["花萼、花瓣、雄蕊、雌蕊", "根、莖、葉、果實", "花萼、花瓣、種子、果實", "軸根、鬚根、莖、葉"], "exp": "花的基本構造由外而內依序有花萼、花瓣、雄蕊和雌蕊，可以幫助植物繁衍後代。"}, {"stage": 1, "unit": "三上｜多采多姿的植物", "q": "植物開花以後，會結出什麼？", "options": ["果實", "軸根", "葉脈", "花萼"], "exp": "植物開花後會結果實，果實裡面有種子。"}, {"stage": 1, "unit": "三上｜多采多姿的植物", "q": "果實裡面有什麼？", "options": ["種子", "根", "花瓣", "葉脈"], "exp": "植物開花後會結果實，果實裡面有種子。"}, {"stage": 1, "unit": "三上｜多采多姿的植物", "q": "植物的根有什麼功能？", "options": ["可以吸收水分，也能抓住土壤、固定植物", "可以開出美麗的花", "可以結出果實", "可以讓葉子變色"], "exp": "根可以吸收水分，也能抓住土壤、固定植物。"}, {"stage": 1, "unit": "三上｜多采多姿的植物", "q": "有一條較粗的主根，長在比較深的土裡，這種根叫做什麼？", "options": ["軸根", "鬚根", "果根", "葉根"], "exp": "軸根有一條較粗的主根，生長在較深的土中。"}, {"stage": 1, "unit": "三上｜多采多姿的植物", "q": "細細小小、長得像鬍鬚的根，叫做什麼？", "options": ["鬚根", "軸根", "果根", "葉根"], "exp": "鬚根細細小小，長得像鬍鬚，生長在較淺的土壤中。"}, {"stage": 1, "unit": "三上｜多采多姿的植物", "q": "下列哪一種說法是對的？", "options": ["一年四季都可以看到不同的花", "只有夏天看得到花", "只有春天看得到花", "冬天一定看不到花"], "exp": "一年四季都可以看到不同的花。"}, {"stage": 2, "unit": "三上｜生活中的力", "q": "兩塊磁鐵互相靠近時，會發生什麼情形？", "options": ["可能互相吸引，也可能互相排斥", "一定會互相吸引", "一定會互相排斥", "一定不會有任何現象"], "exp": "磁鐵具有同極相斥、異極相吸的特性。"}, {"stage": 2, "unit": "三上｜生活中的力", "q": "相同的磁極互相靠近時，會發生什麼情形？", "options": ["互相推斥", "互相吸引", "一點變化也沒有", "兩個磁鐵都變成鐵"], "exp": "磁鐵同極相斥，異極相吸。"}, {"stage": 2, "unit": "三上｜生活中的力", "q": "不同的磁極互相靠近時，會發生什麼情形？", "options": ["互相吸引", "互相推斥", "一點變化也沒有", "磁力全部消失"], "exp": "磁鐵同極相斥，異極相吸。"}, {"stage": 2, "unit": "三上｜生活中的力", "q": "磁鐵有兩種磁極，分別叫做什麼？", "options": ["N極和S極", "A極和B極", "上極和下極", "紅極和藍極"], "exp": "磁極分為N極和S極。"}, {"stage": 2, "unit": "三上｜生活中的力", "q": "長條形磁鐵的哪個部位磁力比較強？", "options": ["兩端的磁極", "正中間", "每個地方都一樣強", "只有側面最強"], "exp": "磁鐵兩端磁極的磁力最強。"}, {"stage": 2, "unit": "三上｜生活中的力", "q": "要比較兩個磁鐵磁力的強弱，可以怎麼做？", "options": ["比較它們能吸住的迴紋針數量", "比較它們的顏色", "比較它們的名字", "比較它們的香味"], "exp": "磁力越強，能吸住的迴紋針數量越多。"}, {"stage": 2, "unit": "三上｜生活中的力", "q": "磁鐵的磁力強弱和磁鐵的大小有關嗎？", "options": ["沒有一定的關係，大的磁鐵不一定比較強", "越大的磁鐵，磁力一定越強", "越小的磁鐵，磁力一定越強", "磁鐵不論大小都沒有磁力"], "exp": "磁鐵磁力強弱與磁鐵大小無關。"}, {"stage": 2, "unit": "三上｜生活中的力", "q": "下列哪一個物品會被磁鐵吸住？", "options": ["迴紋針", "橡皮擦", "鉛筆", "色紙"], "exp": "磁鐵可以吸引鐵製的物品，例如迴紋針。"}, {"stage": 2, "unit": "三上｜生活中的力", "q": "磁鐵可以隔著物品吸引鐵製品嗎？", "options": ["可以，磁鐵可以隔著物品吸引鐵製品", "不可以，一定要碰到才能吸引", "只能吸引塑膠", "不能吸引任何東西"], "exp": "磁鐵可以隔著物品吸引鐵製品，生活中有很多應用。"}, {"stage": 2, "unit": "三上｜生活中的力", "q": "用力踢球，球會飛出去；用力踩飲料罐，飲料罐會被踩扁。這說明了什麼？", "options": ["物體受力後，可能會改變運動情形或形狀", "物體受力後，一定會變成磁鐵", "物體受力後，一定會變成水", "物體受力後，什麼事都不會發生"], "exp": "用力踢球，球會飛出去；用力踩飲料罐，飲料罐會被踩扁。"}, {"stage": 2, "unit": "三上｜生活中的力", "q": "水中的物品會受到水的什麼力？", "options": ["浮力", "磁力", "電力", "風力"], "exp": "水具有浮力，可以讓船浮在水面上。"}, {"stage": 2, "unit": "三上｜生活中的力", "q": "鐵做的東西本來會沉入水中，做成什麼形狀可以讓它浮在水面上？", "options": ["船的形狀", "一顆小鐵球", "一根細細的釘子", "一小塊鐵屑"], "exp": "改變物體的形狀，會改變浮力的強弱，影響物體的浮沉。"}, {"stage": 2, "unit": "三上｜生活中的力", "q": "水除了具有浮力，還能傳送什麼？", "options": ["動力", "磁力", "顏色", "重量"], "exp": "水除了具有浮力，還能傳送動力。"}, {"stage": 3, "unit": "三上｜奇妙的空氣", "q": "空氣在哪裡？", "options": ["我們的四周到處都有空氣", "只有天空才有空氣", "只有水裡才有空氣", "只有房間裡才有空氣"], "exp": "空氣無所不在，在我們周圍充滿了空氣。"}, {"stage": 3, "unit": "三上｜奇妙的空氣", "q": "下列哪一項是空氣的特性？", "options": ["看不見也摸不著，沒有顏色和味道", "是紅色的", "有甜甜的味道", "有固定的形狀"], "exp": "空氣看不見也摸不著，無色、無味。"}, {"stage": 3, "unit": "三上｜奇妙的空氣", "q": "把裝有紙團的杯子倒過來，垂直壓入水中，再拿出來，杯底的紙團會怎麼樣？", "options": ["沒有溼", "全部溼掉", "變成冰塊", "不見了"], "exp": "杯底的紙團沒有溼，因為杯子裡有空氣。"}, {"stage": 3, "unit": "三上｜奇妙的空氣", "q": "把裝有紙團的杯子倒過來壓入水中，杯底的紙團沒有溼。這說明了什麼？", "options": ["空氣占有空間，把水擋在杯子外面", "空氣是固體", "空氣會發光", "空氣有甜味"], "exp": "空氣和其他物質一樣，占有空間。"}, {"stage": 3, "unit": "三上｜奇妙的空氣", "q": "空氣有固定的形狀嗎？", "options": ["沒有固定的形狀", "有，像正方形", "有，像圓形", "有，永遠是三角形"], "exp": "空氣沒有固定的形狀。"}, {"stage": 3, "unit": "三上｜奇妙的空氣", "q": "空氣流動會形成什麼？", "options": ["風", "雨", "雪", "彩虹"], "exp": "空氣流動產生風。"}, {"stage": 3, "unit": "三上｜奇妙的空氣", "q": "我們呼吸需要什麼？", "options": ["空氣", "石頭", "磁鐵", "砂糖"], "exp": "我們的呼吸需要空氣。"}, {"stage": 3, "unit": "三上｜奇妙的空氣", "q": "汙染的空氣會對我們造成什麼影響？", "options": ["會影響健康", "會讓人更健康", "對人完全沒有影響", "會讓植物發出香味"], "exp": "汙染的空氣會影響健康。"}, {"stage": 3, "unit": "三上｜奇妙的空氣", "q": "「空氣品質指標」可以幫助我們知道什麼？", "options": ["空氣品質的好壞，並分成不同等級", "今天有幾隻鳥在飛", "磁鐵的磁力有多強", "水杯裡有多少水"], "exp": "空氣品質指標把空氣品質分成不同的等級。"}, {"stage": 4, "unit": "三上｜廚房裡的科學", "q": "下列哪一組都是廚房中常見的材料？", "options": ["砂糖、食鹽、麵粉", "石頭、磁鐵、鐵釘", "鉛筆、橡皮擦、色紙", "書本、直尺、膠帶"], "exp": "廚房中常用的材料有砂糖、食鹽、小蘇打粉、檸檬酸粉和麵粉等。"}, {"stage": 4, "unit": "三上｜廚房裡的科學", "q": "觀察砂糖、食鹽這些細小的粉末時，可以使用什麼工具把它們看得更清楚？", "options": ["放大鏡", "磁鐵", "溫度計", "量筒"], "exp": "放大鏡可以幫助我們把細小的東西看得更清楚。"}, {"stage": 4, "unit": "三上｜廚房裡的科學", "q": "砂糖放進水裡攪拌，慢慢不見了，這種現象叫做什麼？", "options": ["溶解", "生長", "發芽", "浮起來"], "exp": "砂糖在水中慢慢不見的現象叫做溶解。"}, {"stage": 4, "unit": "三上｜廚房裡的科學", "q": "砂糖可以一直加進同一杯水裡，一直溶解下去嗎？", "options": ["不行，水能溶解的砂糖是有限的", "可以，一直都溶得完", "不行，因為砂糖會變成食鹽", "可以，水會越來越多"], "exp": "砂糖的溶解有限度，不是無限的。"}, {"stage": 4, "unit": "三上｜廚房裡的科學", "q": "實驗時要量取一定量的水，可以使用什麼器材？", "options": ["量筒", "放大鏡", "磁鐵", "迴紋針"], "exp": "量筒可以量取一定量的水。"}, {"stage": 4, "unit": "三上｜廚房裡的科學", "q": "量取水的量時，常用的單位是什麼？", "options": ["毫升", "公斤", "公尺", "度"], "exp": "量取水的量，常用「毫升」作為單位。"}, {"stage": 4, "unit": "三上｜廚房裡的科學", "q": "水溶液依照性質，可以分成哪三種？", "options": ["酸性、中性、鹼性", "高、中、低", "紅、黃、藍", "大、中、小"], "exp": "水溶液可以分成酸性、中性和鹼性。"}, {"stage": 4, "unit": "三上｜廚房裡的科學", "q": "紫色高麗菜汁可以幫助我們做什麼？", "options": ["分辨水溶液的酸鹼性", "測量水的重量", "測量水的溫度", "把水變成冰"], "exp": "紫色高麗菜汁會隨水溶液的酸鹼性改變顏色，可以幫助我們分辨水溶液。"}, {"stage": 4, "unit": "三上｜廚房裡的科學", "q": "下列哪一種水溶液是酸性的？", "options": ["醋", "食鹽水", "砂糖水", "小蘇打水"], "exp": "醋和檸檬酸水是酸性的；小蘇打水是鹼性的。"}, {"stage": 4, "unit": "三上｜廚房裡的科學", "q": "小蘇打水是哪一種性質的水溶液？", "options": ["鹼性", "酸性", "中性", "沒有性質"], "exp": "小蘇打水是鹼性的水溶液。"}, {"stage": 4, "unit": "三上｜廚房裡的科學", "q": "把紫色高麗菜汁分別加入下列水溶液，哪一種的顏色幾乎不會改變？", "options": ["食鹽水", "醋", "檸檬酸水", "小蘇打水"], "exp": "加入食鹽水、砂糖水，紫色高麗菜汁不會變色。"}, {"stage": 5, "unit": "三下｜田園樂", "q": "蔬菜生長需要哪些條件？", "options": ["陽光、空氣、水、土壤", "只需要砂糖", "只需要磁鐵", "只需要冰塊"], "exp": "生物需要陽光、空氣、水和土壤，才能維持生命和生長。"}, {"stage": 5, "unit": "三下｜田園樂", "q": "下列哪一個順序，是蔬菜生長的過程？", "options": ["種子→發芽→長葉→長高長大→開花→結果→枯死", "發芽→種子→開花→長葉→枯死→結果", "種子→開花→發芽→結果→長葉→枯死", "結果→開花→長葉→發芽→種子→枯死"], "exp": "蔬菜的一生會經歷種子、發芽、長葉、長高長大、開花、結果，最後枯死。"}, {"stage": 5, "unit": "三下｜田園樂", "q": "我們吃的蔬菜，是植物的哪些部位？", "options": ["可能是根、莖、葉、花、果實或種子", "只有根", "只有花", "都不是植物的部位"], "exp": "不同的蔬菜，食用的部位不同，可能是植物的根、莖、葉、花、果實或種子。"}, {"stage": 5, "unit": "三下｜田園樂", "q": "種菜時，可以用什麼來記錄蔬菜的成長變化？", "options": ["蔬菜觀察記錄表", "溫度計", "磁鐵", "量筒"], "exp": "種菜時要觀察並記錄蔬菜的生長變化。"}, {"stage": 5, "unit": "三下｜田園樂", "q": "蔬菜種子播種後，接下來會經歷哪個階段？", "options": ["發芽", "開花", "結果", "枯死"], "exp": "蔬菜的生長順序是種子、發芽，再繼續長大。"}, {"stage": 5, "unit": "三下｜田園樂", "q": "蔬菜種子發芽後長出來的小植物，叫做什麼？", "options": ["幼苗", "果實", "花萼", "雄蕊"], "exp": "蔬菜種子發芽後，會長成幼苗。"}, {"stage": 5, "unit": "三下｜田園樂", "q": "用有開口的紙箱蓋住蔬菜幼苗，是想觀察什麼對蔬菜生長的影響？", "options": ["陽光", "磁力", "雨量", "風向"], "exp": "透過觀察與實驗，可以了解陽光對蔬菜生長的影響。"}, {"stage": 5, "unit": "三下｜田園樂", "q": "蔬菜開花、結果之後，利用什麼來繁衍下一代？", "options": ["種子", "磁鐵", "空氣", "雨量"], "exp": "生物壽命有限，利用種子繁衍後代，讓生命延續下去。"}, {"stage": 5, "unit": "三下｜田園樂", "q": "種菜之前，可以先做什麼準備？", "options": ["查資料，了解蔬菜的種植方式，並選擇適合當季種植的蔬菜", "把種子丟進水溝", "不用準備，直接等著收成", "把蔬菜種在冰箱裡"], "exp": "種菜前要先蒐集資料，了解蔬菜的生長條件和種植方式。"}, {"stage": 6, "unit": "三下｜溫度變化對物質的影響", "q": "下列哪些因素，可能會讓物質產生變化？", "options": ["溫度、空氣和水", "名字、年齡和體重", "聲音、顏色和味道", "數字、文字和圖畫"], "exp": "物質會受到溫度、空氣和水等因素影響，可能產生變化。"}, {"stage": 6, "unit": "三下｜溫度變化對物質的影響", "q": "水有哪三種形態？", "options": ["液態、固態、氣態", "酸性、中性、鹼性", "大、中、小", "冷、熱、溫"], "exp": "水有液態、固態和氣態三種形態。"}, {"stage": 6, "unit": "三下｜溫度變化對物質的影響", "q": "冰是水的哪一種形態？", "options": ["固態", "液態", "氣態", "沒有形態"], "exp": "冰是固態的水。"}, {"stage": 6, "unit": "三下｜溫度變化對物質的影響", "q": "水蒸氣是水的哪一種形態？", "options": ["氣態", "固態", "液態", "沒有形態"], "exp": "水蒸氣是氣態的水。"}, {"stage": 6, "unit": "三下｜溫度變化對物質的影響", "q": "冰受熱，變成液態水的現象，叫做什麼？", "options": ["融化", "蒸發", "溶解", "發芽"], "exp": "冰受熱，固態冰變成液態水的現象叫做融化。"}, {"stage": 6, "unit": "三下｜溫度變化對物質的影響", "q": "水變成看不見、散布在空氣中的水蒸氣，這個現象叫做什麼？", "options": ["蒸發", "融化", "溶解", "生長"], "exp": "水變成水蒸氣的現象叫做蒸發。"}, {"stage": 6, "unit": "三下｜溫度變化對物質的影響", "q": "想讓濕毛巾比較快乾，下列哪一種做法比較好？", "options": ["放在太陽下曬", "放在冰箱裡", "用塑膠袋包起來", "放在陰暗的櫃子裡"], "exp": "提高溫度、用風吹，都可以讓水蒸發得比較快。"}, {"stage": 6, "unit": "三下｜溫度變化對物質的影響", "q": "冰塊放在不同形狀的容器裡，冰塊的形狀會改變嗎？", "options": ["不會，冰是固態，形狀固定不變", "會，冰會跟著容器改變形狀", "會，冰會變成氣體", "不會，因為冰是氣態"], "exp": "液態水會因容器改變形狀，固態冰的形狀固定不變。"}, {"stage": 6, "unit": "三下｜溫度變化對物質的影響", "q": "把水倒進不同形狀的容器裡，水會怎麼樣？", "options": ["形狀會跟著容器改變", "形狀固定不變", "立刻變成冰", "立刻變成氣體"], "exp": "液態水會因容器改變形狀。"}, {"stage": 6, "unit": "三下｜溫度變化對物質的影響", "q": "溫度升高時，冰會怎麼樣？", "options": ["會融化，溫度會影響冰融化的快慢", "不會有任何變化", "會變得更硬", "會變成蔬菜"], "exp": "溫度升高時冰會融化，溫度會影響冰融化的快慢。"}, {"stage": 7, "unit": "三下｜我是動物解說員", "q": "常見動物的身體，主要分成哪幾個部分？", "options": ["頭、軀幹和肢", "根、莖和葉", "花萼、花瓣和雄蕊", "種子、果實和花"], "exp": "常見動物的身體分為頭、軀幹和肢。"}, {"stage": 7, "unit": "三下｜我是動物解說員", "q": "常見的動物可以分成哪些類別？", "options": ["哺乳類、兩生類、魚類、鳥類、爬蟲類等", "蔬菜類、水果類、花草類", "金屬類、塑膠類、木頭類", "酸性、鹼性、中性"], "exp": "常見的動物可以分為哺乳類、兩生類、魚類、鳥類、爬蟲類及其他種類。"}, {"stage": 7, "unit": "三下｜我是動物解說員", "q": "動物的身體構造和功能，有什麼關係？", "options": ["構造和功能是互相配合的", "構造和功能完全沒有關係", "構造越多，功能越少", "沒有構造也能有功能"], "exp": "動物的身體構造與功能是互相配合的。"}, {"stage": 7, "unit": "三下｜我是動物解說員", "q": "不同的動物，外形特徵都一樣嗎？", "options": ["不一樣，不同的動物有不同的外形特徵", "一樣，所有動物都長得一樣", "一樣，所有動物都有翅膀", "一樣，所有動物都有鰭"], "exp": "不同的動物，具有不同的外形特徵。"}, {"stage": 7, "unit": "三下｜我是動物解說員", "q": "兔、蛙和蜥蜴的身體都有什麼？", "options": ["頭、軀幹和四肢", "根、莖和葉", "花瓣和花萼", "果實和種子"], "exp": "兔、蛙、蜥蜴的身體都有頭、軀幹和四肢。"}, {"stage": 7, "unit": "三下｜我是動物解說員", "q": "不同的環境，會有什麼樣的生物生存？", "options": ["不同的環境有不同的生物生存", "所有環境的生物都一模一樣", "只有一種環境有生物", "沒有任何環境有生物"], "exp": "不同的環境有不同的生物生存。"}, {"stage": 7, "unit": "三下｜我是動物解說員", "q": "動物生長需要什麼？", "options": ["食物", "磁鐵", "量筒", "放大鏡"], "exp": "動物生長需要食物。"}, {"stage": 7, "unit": "三下｜我是動物解說員", "q": "動物察覺到環境的改變時，會怎麼樣？", "options": ["會做出身體或行為的反應", "什麼反應都不會有", "會變成植物", "會變成石頭"], "exp": "動物的感覺器官接受外界刺激，會引起生理和行為反應。"}, {"stage": 7, "unit": "三下｜我是動物解說員", "q": "動物的外形顏色和環境相似或相異，有什麼幫助？", "options": ["能幫助牠們生存", "能讓牠們變成植物", "能讓牠們變成石頭", "能讓牠們不需要吃東西"], "exp": "動物的外形顏色與環境相似或相異，能幫助牠們生存。"}, {"stage": 7, "unit": "三下｜我是動物解說員", "q": "動物的外形有些和人類相像，有些不同，但都具有什麼功能？", "options": ["幫助動物適應環境", "幫助動物變成人類", "讓動物長出根", "讓動物發芽"], "exp": "動物的外形都具有功能，可以幫助動物適應環境。"}, {"stage": 8, "unit": "三下｜天氣變變變", "q": "測量雨量時，雨量的單位是什麼？", "options": ["毫米（mm）", "公斤", "公尺", "度"], "exp": "雨量的單位是毫米（mm）。"}, {"stage": 8, "unit": "三下｜天氣變變變", "q": "下列哪一種容器比較適合用來收集雨水、測量雨量？", "options": ["平底直筒的容器", "上寬下窄的碗", "圓錐形的漏斗", "球形的瓶子"], "exp": "平底直筒的容器比較適合作為雨量器。"}, {"stage": 8, "unit": "三下｜天氣變變變", "q": "收集雨水的時候，適合選在哪裡？", "options": ["空曠、沒有遮蔽物的地方，例如草地上", "屋簷下", "大樹下", "走廊裡"], "exp": "收集雨水時，要選空曠、沒有遮蔽物的地方，例如草地上。"}, {"stage": 8, "unit": "三下｜天氣變變變", "q": "天氣預報常用哪些資料來表達天氣狀態？", "options": ["雨量、溫度、風向、風速", "體重、身高、年齡、視力", "花的顏色、葉子形狀、果實大小、種子數量", "岩石硬度、土壤顏色、沙子大小、水的重量"], "exp": "天氣預報常用雨量、溫度、風向、風速等資料來表達天氣狀態。"}, {"stage": 8, "unit": "三下｜天氣變變變", "q": "晴天、多雲、陰天，主要是根據什麼來判斷的？", "options": ["天空中雲的多少（雲況）", "風的顏色", "雨水的味道", "溫度計的大小"], "exp": "可以根據雲況來說明天氣狀況。"}, {"stage": 8, "unit": "三下｜天氣變變變", "q": "雲況和天氣狀況有什麼關係？", "options": ["有密切的關係，雲是天氣變化的徵兆", "完全沒有關係", "雲只會在晴天出現", "雲會讓溫度計變重"], "exp": "雲是天氣變化的徵兆，各種雲況和天氣狀況有密切的關係。"}, {"stage": 8, "unit": "三下｜天氣變變變", "q": "觀察天氣時，可以從哪些方面來觀察？", "options": ["雲量、氣溫、風、雨", "體重、身高、視力、年齡", "磁鐵、迴紋針、橡皮擦、鉛筆", "砂糖、食鹽、麵粉、小蘇打"], "exp": "天氣狀況可以從雲量、氣溫、風和雨來觀察。"}, {"stage": 8, "unit": "三下｜天氣變變變", "q": "測量氣溫，要使用什麼？", "options": ["溫度計", "磁鐵", "放大鏡", "迴紋針"], "exp": "天氣的資料可以使用適當的儀器測得，測量氣溫要用溫度計。"}, {"stage": 8, "unit": "三下｜天氣變變變", "q": "一年四季的氣溫和天氣會有什麼不同？", "options": ["氣溫和天氣都會有所不同", "四季都完全一樣", "只有氣溫會變，天氣不會", "只有天氣會變，氣溫不會"], "exp": "一年四季氣溫會有所變化，天氣也會有所不同。"}, {"stage": 8, "unit": "三下｜天氣變變變", "q": "氣象報告可以讓我們知道什麼？", "options": ["天氣可能會有什麼變化", "明天考試會考幾分", "磁鐵的磁力有多強", "蔬菜有幾片葉子"], "exp": "氣象報告可以讓我們知道天氣的可能變化。"}, {"stage": 8, "unit": "三下｜天氣變變變", "q": "氣象預報說明天可能會下雨，出門時可以帶什麼？", "options": ["雨具", "磁鐵", "量筒", "放大鏡"], "exp": "知道天氣可能下雨，可以攜帶雨具，也要注意天氣變化。"}];
+const W=12,H=8,T=64,$=i=>document.getElementById(i),cv=$('cv'),g=cv.getContext('2d');
+const TER={'.':{n:'草地',c:1,d:0,col:'#406640'},F:{n:'森林',c:2,d:1,col:'#2e5434'},M:{n:'山地',c:-1,d:0,col:'#595550'},W:{n:'水',c:-1,d:0,col:'#3359a6'}};
+const ORDER=['swordsman','archer','brawler','sorcerer','knight','archmage','dragoon','robot'],COUNT=[3,4,5,6,7,8,8,8];
+const SPAWN=[[1,2],[0,3],[1,4],[0,5],[2,3],[1,1],[0,2],[2,5]];
+const CL={};[
+['swordsman','賽恩','劍士',24,8,3,1,4,1,1,0,0,0],['archer','莉雅','弓箭手',16,7,1,1,4,2,2,0,0,0],['brawler','巴洛','拳擊手',28,9,2,0,4,1,1,0,0,0],
+['sorcerer','卡蓮','巫師',15,8,0,4,3,1,2,1,0,0],['knight','雷恩','騎士',26,8,5,1,5,1,1,0,0,3],['archmage','米拉','大法師',14,10,0,5,3,1,3,1,0,0],
+['dragoon','薇菈','龍騎士',22,9,3,2,5,1,1,0,1,0],['robot','零號','機器人',34,8,6,6,2,1,1,0,0,0],['goblin','哥布林','哥布林',14,5,1,0,3,1,1,0,0,0],
+['orc','獸人','獸人',24,8,2,0,2,1,1,0,0,0],['bandit_archer','盜賊弓手','盜賊弓手',12,6,0,0,3,2,2,0,0,0],['skeleton','骷髏兵','骷髏兵',16,7,2,1,3,1,1,0,0,0],
+['dark_mage','暗黑法師','暗黑法師',12,8,0,3,3,1,2,1,0,0],['wolf','暗影狼','暗影狼',14,6,1,0,5,1,1,0,0,0],['golem','石魔像','石魔像',32,9,5,1,2,1,1,0,0,0],
+['boss','暗影領主','暗影領主',44,10,4,4,3,1,2,0,0,0]].forEach(r=>CL[r[0]]={id:r[0],who:r[1],name:r[2],hp:r[3],atk:r[4],def:r[5],res:r[6],mv:r[7],mn:r[8],rg:r[9],mg:r[10],fly:r[11],fc:r[12]});
+const LK={swordsman:['#ffd9b3','#73401a','#3366d9','#f2d94d'],archer:['#ffdbb8','#e6b333','#339947','#80471a'],brawler:['#e6b380','#1a1a1a','#d99940','#cc1a1a'],
+sorcerer:['#f2d9d9','#261a40','#1a7380','#ccd966'],knight:['#ffd9b3','#4d331a','#bfc7d9','#d92626'],archmage:['#ffdec0','#f2f2f5','#594dcc','#f2cc4d'],
+dragoon:['#ffd9b3','#cc331a','#b31f26','#f2cc4d'],robot:['#b3bfcc','#4d4d59','#8c99ad','#4de6ff'],goblin:['#73bf4d','#33331a','#80593a','#4d331a'],
+orc:['#4d8c40','#1a1a1a','#734d33','#b3b3b3'],bandit_archer:['#f2cca6','#33261a','#66472e','#33261a'],skeleton:['#ede9d9','#e6e6e6','#73738c','#4d4d59'],
+dark_mage:['#ccc7d9','#1a1a1a','#59216e','#e64d4d'],wolf:['#80808c','#4d4d59','#6b6b7a','#cc3333'],golem:['#807366','#4d4d4d','#857a6b','#ff991a'],boss:['#d9cce6','#331a4d','#40205a','#f2cc4d']};
+const SPK={賽恩:'swordsman',莉雅:'archer',巴洛:'brawler',卡蓮:'sorcerer',雷恩:'knight',米拉:'archmage',薇菈:'dragoon',零號:'robot',暗影領主:'boss'};
+
+let units=[],phase='idle',cur=null,reach=[],atk=[],turn=1,si=0,won=false,hov=null,map=[],queue=[],qc=null,qo=[],qt=null,qok=false,qthen=null,dl=[],di=0,ddone=null,portrait='';
+const K=(x,y)=>x+','+y,has=(a,x,y)=>a.some(p=>p[0]===x&&p[1]===y),man=(a,b,c,d)=>Math.abs(a-c)+Math.abs(b-d);
+const shuf=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const unitAt=(x,y)=>units.find(u=>u.x===x&&u.y===y);
+
+function cost(x,y,u){if(u.fly)return 1;const c=map[y][x],b=TER[c].c;if(b<0)return -1;if(c==='F'&&u.fc)return u.fc;return b}
+function dij(sx,sy,lim,block,u){const d=new Map([[K(sx,sy),0]]),q=[[sx,sy]];
+ while(q.length){const [x,y]=q.shift();for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=W||ny>=H)continue;
+  const c=cost(nx,ny,u);if(c<0||(block&&unitAt(nx,ny)))continue;const nd=d.get(K(x,y))+c;if(nd>lim)continue;const k=K(nx,ny);
+  if(!d.has(k)||nd<d.get(k)){d.set(k,nd);q.push([nx,ny])}}}return d}
+const reachable=u=>[...dij(u.x,u.y,u.mv,true,u).keys()].map(k=>k.split(',').map(Number));
+const targetsFrom=(u,x,y)=>units.filter(o=>o.team!==u.team&&man(x,y,o.x,o.y)>=u.mn&&man(x,y,o.x,o.y)<=u.rg).map(o=>[o.x,o.y]);
+
+function addUnit(id,team,x,y){const c=CL[id];units.push({...c,team,x,y,max:c.hp,acted:false,pend:false})}
+function loadStage(i){si=i;const st=STAGES[i];map=st.map;units=[];cur=null;reach=[];atk=[];turn=1;
+ for(let k=0;k<COUNT[i];k++)addUnit(ORDER[k],'p',SPAWN[k][0],SPAWN[k][1]);
+ st.enemies.forEach(e=>addUnit(e[0],'e',e[1],e[2]));buildQueue();$('bn').style.display='none';
+ startDlg(st.intro,()=>{phase='idle';ui()})}
+function buildQueue(){const own=[],oth=[];QUIZ.forEach((q,i)=>(q.stage===si+1?own:oth).push(i));queue=[...shuf(oth),...shuf(own)]}
+
+/* ---- 戰鬥 ---- */
+function attack(a,t){const b=TER[map[t.y][t.x]].d,gd=a.mg?t.res:t.def;t.hp-=Math.max(1,a.atk-gd-b);
+ if(t.team==='e'&&t.hp<=0){t.hp=0;t.pend=true}else units=units.filter(u=>u.hp>0||u.pend)}
+function finish(){if(cur)cur.acted=true;cur=null;reach=[];atk=[];phase='idle';if(checkOver())return;
+ if(units.filter(u=>u.team==='p').every(u=>u.acted))endPlayer();else ui()}
+function checkOver(){const p=units.filter(u=>u.team==='p').length,e=units.filter(u=>u.team==='e').length;if(p&&e)return false;
+ const st=STAGES[si];won=e===0;startDlg(won?st.win:[['賽恩','可惡……全軍撤退！我們一定會再回來的！']],()=>{phase='over';ui()});return true}
+function endPlayer(){phase='enemy';ui();enemyTurn()}
+async function enemyTurn(){for(const e of units.slice()){if(e.team!=='e'||e.hp<=0)continue;await sleep(350);
+  const ps=units.filter(u=>u.team==='p');if(!ps.length)break;const dm=dij(e.x,e.y,9999,false,e);
+  let tg=ps[0],bd=1e9;ps.forEach(u=>{const d=dm.get(K(u.x,u.y))??9999;if(d<bd){bd=d;tg=u}});
+  const dt=dij(tg.x,tg.y,9999,false,e);let best=[e.x,e.y],bs=1e9;
+  reachable(e).forEach(([x,y])=>{let s=dt.get(K(x,y))??9999;if(targetsFrom(e,x,y).length)s-=1000+TER[map[y][x]].d*2;if(s<bs){bs=s;best=[x,y]}});
+  e.x=best[0];e.y=best[1];render();await sleep(300);
+  const v=targetsFrom(e,e.x,e.y).map(c=>unitAt(c[0],c[1]));if(v.length){attack(e,v.reduce((a,b)=>b.hp<a.hp?b:a));render();await sleep(300)}
+  if(checkOver())return}
+ units.forEach(u=>u.acted=false);turn++;phase='idle';ui()}
+
+/* ---- 輸入 ---- */
+function cell(ev){const r=cv.getBoundingClientRect();return[Math.floor((ev.clientX-r.left)/r.width*W),Math.floor((ev.clientY-r.top)/r.height*H)]}
+cv.addEventListener('mousemove',ev=>{hov=cell(ev);ui()});
+cv.addEventListener('click',ev=>{const [x,y]=cell(ev);if(x<0||y<0||x>=W||y>=H)return;hov=[x,y];
+ if(phase==='idle'){const u=unitAt(x,y);if(u&&u.team==='p'&&!u.acted){cur=u;reach=reachable(u);phase='move'}}
+ else if(phase==='move'){if(has(reach,x,y)){cur.x=x;cur.y=y;reach=[];atk=targetsFrom(cur,x,y);if(!atk.length){finish();return}phase='atk'}else cancel()}
+ else if(phase==='atk'&&has(atk,x,y)){const t=unitAt(x,y);attack(cur,t);if(t.pend)startQuiz(t,finish);else finish();return}
+ ui()});
+function cancel(){if(phase==='move'){cur=null;reach=[];phase='idle';ui()}}
+$('bw').onclick=()=>{if(phase==='atk')finish()};$('be').onclick=()=>{if(phase==='idle')endPlayer()};$('bc').onclick=cancel;
+$('bn').onclick=()=>loadStage(won&&si<STAGES.length-1?si+1:(won?0:si));
+addEventListener('keydown',e=>{if(phase==='dlg'&&(e.key===' '||e.key==='Enter')){e.preventDefault();nextDlg()}
+ else if(e.key===' '&&phase==='atk'){e.preventDefault();finish()}else if(e.key==='Enter'&&phase==='idle')endPlayer();else if(e.key==='Escape')cancel()});
+
+/* ---- 對話 ---- */
+function startDlg(lines,done){dl=lines;di=0;ddone=done;phase='dlg';$('dlg').style.display='block';showDlg()}
+function showDlg(){const l=dl[di];$('dn').textContent=l[0];$('dt').textContent=l[1]+'　▼';portrait=SPK[l[0]]||'';place();render()}
+function nextDlg(){di++;if(di>=dl.length){$('dlg').style.display='none';portrait='';ddone()}else showDlg()}
+$('dlg').onclick=nextDlg;
+function place(){const d=$('dlg'),r=cv.getBoundingClientRect(),w=$('w').getBoundingClientRect();d.style.top=(r.height-d.offsetHeight)+'px'}
+addEventListener('resize',()=>{if(phase==='dlg')place()});
+
+/* ---- 答題 ---- */
+function startQuiz(t,then){qt=t;qthen=then;if(!queue.length)buildQueue();qc=QUIZ[queue.pop()];qo=shuf([0,1,2,3]);phase='quiz';
+ $('qh').textContent=t.who+'被打倒了！回答問題，才能徹底擊敗它！（'+qc.unit+'）';$('qq').textContent=qc.q;$('qf').textContent='';$('qc').style.display='none';
+ const ob=$('ob');ob.innerHTML='';qo.forEach((o,i)=>{const b=document.createElement('button');b.className='o';b.textContent='①②③④'[i]+'　'+qc.options[o];b.onclick=()=>answer(i);ob.appendChild(b)});
+ $('qz').style.display='block';ui()}
+function answer(i){qok=qo[i]===0;[...$('ob').children].forEach(b=>b.disabled=true);
+ $('qf').textContent=(qok?'答對了！'+qt.who+'被徹底擊敗了！':'答錯了……正確答案是「'+qc.options[0]+'」。'+qt.who+'恢復了一些力氣，又站了起來！')+'\n說明：'+qc.exp;$('qc').style.display='inline-block'}
+$('qc').onclick=()=>{$('qz').style.display='none';qt.pend=false;if(qok)qt.hp=0;else qt.hp=Math.max(1,Math.ceil(qt.max*.3));
+ units=units.filter(u=>u.hp>0);qt=null;phase='idle';qthen()};
+
+/* ---- 畫面 ---- */
+function ui(){const m={idle:'第 '+(si+1)+' 關　'+STAGES[si].name+'　第 '+turn+' 回合：點選我方角色（藍圈）',move:'選擇移動位置（藍色格）',atk:'點紅色格攻擊敵人，或按「待機」',enemy:'敵方回合…',quiz:'答題中…',dlg:'',
+ over:won?(si<STAGES.length-1?'第 '+(si+1)+' 關完成！':'全關通關！恭喜你守護了晨曦王國！'):'全軍覆沒…'}[phase];
+ let h=m;if(hov&&hov[0]>=0&&hov[0]<W&&hov[1]>=0&&hov[1]<H&&phase!=='dlg'){const t=TER[map[hov[1]][hov[0]]];h+='\n'+t.n+(t.c<0?'（無法通行）':'（消耗 '+t.c+'，防禦 +'+t.d+'）');
+  const u=unitAt(hov[0],hov[1]);if(u)h+='　'+u.who+'（'+u.name+'）HP '+u.hp+'/'+u.max+' 攻'+u.atk+' 防'+u.def+' 魔防'+u.res+' 移動'+u.mv+' 射程'+u.mn+'-'+u.rg}
+ $('hud').textContent=h;$('bw').disabled=phase!=='atk';$('be').disabled=phase!=='idle';$('bc').disabled=phase!=='move';
+ const bn=$('bn');if(phase==='over'){bn.style.display='inline-block';bn.textContent=won?(si<STAGES.length-1?'前往下一關':'從第一關重新開始'):'重新挑戰本關'}else bn.style.display='none';render()}
+
+function render(){g.clearRect(0,0,768,512);for(let y=0;y<H;y++)for(let x=0;x<W;x++)tile(x,y);
+ g.fillStyle='rgba(51,128,255,.5)';reach.forEach(c=>g.fillRect(c[0]*T,c[1]*T,T,T));g.fillStyle='rgba(255,51,51,.5)';atk.forEach(c=>g.fillRect(c[0]*T,c[1]*T,T,T));
+ units.forEach(unit);
+ if(phase==='dlg'&&portrait){g.fillStyle='rgba(0,0,0,.55)';g.fillRect(8,150,230,230);ch(portrait,123,270,2.5)}}
+function tile(x,y){const c=map[y][x],px=x*T,py=y*T;g.fillStyle=TER[c].col;g.fillRect(px,py,T,T);
+ if(c==='F'){g.fillStyle='#14400f';[[20,24,12],[44,40,14]].forEach(a=>{g.beginPath();g.arc(px+a[0],py+a[1],a[2],0,7);g.fill()})}
+ if(c==='M'){g.fillStyle='#808080';g.beginPath();g.moveTo(px+6,py+58);g.lineTo(px+32,py+8);g.lineTo(px+58,py+58);g.fill();g.fillStyle='#e6e6f0';g.beginPath();g.moveTo(px+24,py+24);g.lineTo(px+32,py+8);g.lineTo(px+40,py+24);g.fill()}
+ if(c==='W'){g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=2;g.beginPath();g.moveTo(px+10,py+22);g.lineTo(px+30,py+22);g.moveTo(px+34,py+44);g.lineTo(px+54,py+44);g.stroke()}
+ g.strokeStyle='rgba(0,0,0,.4)';g.lineWidth=1;g.strokeRect(px,py,T,T)}
+function unit(u){const cx=u.x*T+32,cy=u.y*T+34,col=u.team==='p'?'#4080ff':'#ff4040';g.fillStyle=col+'59';g.beginPath();g.arc(cx,cy,28,0,7);g.fill();
+ g.strokeStyle=col;g.lineWidth=3;g.beginPath();g.arc(cx,cy,28,0,7);g.stroke();ch(u.id,cx,cy+1,.8);
+ if(u.acted&&u.team==='p'){g.fillStyle='rgba(0,0,0,.5)';g.beginPath();g.arc(cx,cy,28,0,7);g.fill()}
+ g.fillStyle='rgba(0,0,0,.7)';g.fillRect(u.x*T+6,u.y*T+T-9,T-12,6);g.fillStyle='#33e633';g.fillRect(u.x*T+6,u.y*T+T-9,(T-12)*u.hp/u.max,6)}
+
+/* ---- 角色造型（原創，全部用程式繪製）---- */
+function ch(id,cx,cy,s){const [sk,hr,ou,tr]=LK[id],P=(x,y)=>[cx+x*s,cy+y*s],ST='#bfc7d9',WD='#80542a',DK='#1f1f29',BN='#ede9d9';
+ const poly=(p,c)=>{g.fillStyle=c;g.beginPath();p.forEach((q,i)=>{const a=P(q[0],q[1]);i?g.lineTo(a[0],a[1]):g.moveTo(a[0],a[1])});g.closePath();g.fill()};
+ const rect=(x,y,w,h,c)=>{g.fillStyle=c;const a=P(x,y);g.fillRect(a[0],a[1],w*s,h*s)};
+ const ball=(x,y,r,c)=>{g.fillStyle=c;const a=P(x,y);g.beginPath();g.arc(a[0],a[1],r*s,0,7);g.fill()};
+ const line=(x1,y1,x2,y2,w,c)=>{g.strokeStyle=c;g.lineWidth=w*s;const a=P(x1,y1),b=P(x2,y2);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke()};
+ const bow=()=>{g.strokeStyle=WD;g.lineWidth=3*s;const a=P(2,4);g.beginPath();g.arc(a[0],a[1],22*s,-Math.PI/3,Math.PI/3);g.stroke();line(13,-15,13,23,1.2,'#eee')};
+ if(id==='robot'){rect(-10,24,8,9,DK);rect(2,24,8,9,DK);rect(-22,-4,8,20,DK);rect(14,-4,8,20,DK);rect(-14,-6,28,32,ou);rect(-14,14,28,4,DK);ball(0,6,5,tr);
+  rect(-13,-28,26,20,'#a3b0c2');rect(-10,-22,20,7,DK);rect(-8,-21,16,5,tr);line(0,-28,0,-37,2,DK);ball(0,-38,3.5,'#f44');rect(20,4,14,9,DK);ball(35,8,3.5,tr);return}
+ if(id==='wolf'){poly([[-24,14],[-34,-2],[-22,6]],ou);[-16,-4,8].forEach(x=>rect(x,20,6,12,DK));poly([[-24,6],[12,0],[24,10],[18,26],[-16,26],[-26,16]],ou);ball(22,-2,10,ou);
+  poly([[28,-4],[40,4],[28,8]],'#8a8a99');poly([[14,-10],[16,-22],[22,-10]],ou);poly([[22,-10],[28,-20],[30,-8]],ou);ball(25,-4,2,'#f33');ball(40,4,2,DK);return}
+ if(id==='golem'){rect(-14,22,10,11,'#5a5348');rect(4,22,10,11,'#5a5348');rect(-31,-6,12,28,'#766c60');rect(19,-6,12,28,'#766c60');rect(-19,-8,38,34,ou);rect(-10,-26,20,18,'#948a7b');
+  rect(-7,-19,5,4,tr);rect(2,-19,5,4,tr);line(-10,0,-2,10,2,'#5a5348');line(6,4,12,18,2,'#5a5348');return}
+ const hood=['sorcerer','dark_mage','bandit_archer'].includes(id),helm=['knight','dragoon','boss'].includes(id),bald=['goblin','orc','skeleton'].includes(id);
+ if(id==='dragoon'){poly([[-10,0],[-38,-18],[-32,4],[-38,14],[-12,16]],'#8c141f');poly([[10,0],[38,-18],[32,4],[38,14],[12,16]],'#8c141f')}
+ if(id==='knight')poly([[-12,0],[12,0],[19,32],[-19,32]],tr);if(id==='boss')poly([[-13,-2],[13,-2],[24,34],[-24,34]],'#59103f');
+ rect(-9,26,7,8,DK);rect(2,26,7,8,DK);poly([[-12,-2],[12,-2],[15,27],[-15,27]],ou);rect(-14,15,28,4,tr);line(-12,3,-17,14,6,ou);line(12,3,17,14,6,ou);ball(-17,15,4,sk);ball(17,15,4,sk);
+ if(hood){ball(0,-13,14.5,ou);ball(0,-11,9.5,sk)}
+ else if(helm){ball(0,-14,13.5,id==='knight'?ST:id==='dragoon'?'#a61a26':'#38205c');rect(-8,-15,16,11,sk)}
+ else{if(!bald)ball(0,-15,12.5,hr);ball(0,-12,11,sk)}
+ const ey=hood||helm?-11:-12,er=id==='skeleton'?3:(id==='goblin'||id==='dark_mage'||id==='boss')?2.2:1.8,ec=id==='dark_mage'||id==='boss'?'#f33':id==='goblin'?'#ffe633':id==='skeleton'?'#0d0d14':'#1a1a26';
+ ball(-4,ey,er,ec);ball(4,ey,er,ec);
+ switch(id){
+ case'swordsman':poly([[-11,-19],[-7,-29],[-2,-21],[3,-30],[7,-21],[12,-27],[12,-15],[-11,-15]],hr);rect(-12,0,24,4,tr);line(20,26,20,-14,4,ST);rect(14,14,12,4,tr);break;
+ case'brawler':poly([[-11,-18],[-9,-27],[-3,-20],[2,-28],[7,-20],[11,-26],[11,-18]],hr);rect(-12,-19,24,4,tr);line(11,-17,21,-11,3,tr);ball(-20,12,8,tr);ball(20,12,8,tr);break;
+ case'archer':poly([[-10,-18],[10,-18],[7,-27],[-7,-24]],ou);line(8,-24,14,-34,2.5,'#f55');ball(-14,-8,5,hr);ball(-16,-2,4,hr);bow();break;
+ case'archmage':poly([[-8,-6],[8,-6],[3,10],[0,14],[-3,10]],hr);poly([[-19,-18],[19,-18],[14,-23],[-14,-23]],ou);poly([[-11,-22],[11,-22],[4,-36],[-4,-44]],ou);rect(-11,-25,22,3,tr);line(20,32,20,-26,3,WD);ball(20,-29,6,'#80d9ff');break;
+ case'sorcerer':case'dark_mage':poly([[-8,-24],[8,-24],[0,-35]],ou);rect(-12,-2,24,3,tr);line(20,32,20,-18,3,WD);ball(20,-22,5.5,id==='dark_mage'?'#f44':'#4de6cc');break;
+ case'knight':poly([[-2,-27],[3,-27],[12,-36],[-7,-31]],tr);poly([[-27,0],[-12,0],[-12,17],[-20,26],[-27,17]],ST);line(-20,2,-20,22,2,tr);line(-26,9,-13,9,2,tr);line(21,34,21,-26,3,WD);poly([[18,-26],[24,-26],[21,-38]],ST);break;
+ case'dragoon':poly([[-11,-21],[-18,-35],[-6,-25]],BN);poly([[11,-21],[18,-35],[6,-25]],BN);rect(-4,-2,8,20,tr);line(21,34,21,-30,3,ST);poly([[18,-30],[24,-30],[21,-42]],'#f24d33');break;
+ case'bandit_archer':rect(-8,-8,16,7,'#801f1f');bow();break;
+ case'goblin':poly([[-10,-15],[-25,-22],[-10,-8]],sk);poly([[10,-15],[25,-22],[10,-8]],sk);line(20,28,20,-6,4,WD);ball(20,-8,7,WD);break;
+ case'orc':rect(-8,-17,16,3,DK);poly([[-6,-6],[-3,-6],[-5,0]],BN);poly([[3,-6],[6,-6],[5,0]],BN);line(20,30,20,-12,3.5,WD);poly([[20,-12],[32,-18],[32,-2],[20,-6]],ST);break;
+ case'skeleton':line(0,0,0,26,1.5,BN);[6,12,18].forEach(y=>line(-9,y,9,y,1.5,BN));rect(-5,-5,10,2.5,DK);line(20,26,20,-12,3,'#998c80');break;
+ case'boss':poly([[-11,-24],[-14,-38],[-6,-26]],tr);poly([[-3,-26],[0,-40],[3,-26]],tr);poly([[6,-26],[14,-38],[11,-24]],tr);ball(-14,2,6,tr);ball(14,2,6,tr);line(23,34,23,-30,5,'#8c1f99');rect(15,14,16,4,tr)}}
+
+loadStage(0);
+</script></body></html>
